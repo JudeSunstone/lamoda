@@ -4,30 +4,44 @@ const headerCityButton = document.querySelector('.header__city-button'); // ПО
 let hash = location.hash.substring(1); // location - объект, есть и хэш.
 // сабстринг - удаляем решетку - хэш еред значением, которое будем потом использовать 
 
-if(localStorage.getItem('lomoda-location')) {
-    headerCityButton.textContent = localStorage.getItem('lomoda-location');
-}
+//if(localStorage.getItem('lomoda-location')) {
+    //headerCityButton.textContent = localStorage.getItem('lomoda-location');
+//}
 // если мы получили данные, то сохранить их и использовать,
 //чтобы город оставался тот же после перезагрузки
-//ПОЧЕМУ ТАК???
-//переделанный if  ниже в строку и сверху можно удалить 
-headerCityButton.textContent = localStorage.getItem('lomoda-location') || 'Ваш город';
 
+const updateLocation = () => {
+    const lsLocation = localStorage.getItem('lomoda-location');
+
+    headerCityButton.textContent = 
+    lsLocation && lsLocation !== 'null' ? lsLocation : 'Ваш город';
+   }; // при введении не уиарается после обновления.  При отмене осается Ваш город
 
 headerCityButton.addEventListener('click', () => { 
-    // tесли аргумент внтури стрелочной функции один, то скобки можно убрать
-    const city = prompt('Укажите ваш город');
-    headerCityButton.textContent = city;
-    //добавить local storage чтобы хранить там после обновление вводенные данные
-    localStorage.setItem('lomoda-location', city);
+    // если аргумент внтури стрелочной функции один, то скобки можно убрать
+    const city = prompt('Укажите ваш город').trim(); // trim убирает пробелы
+    
+    if (city!== null) {
+        localStorage.setItem('lomoda-location', city);
+        //добавить local storage чтобы хранить там после обновление вводенные данные
+        }
+    updateLocation();
+    
 });
+updateLocation();
+
 
 //убираем скролл страницы при открытом модальном окне
 
 const disableScroll = () => {
     
+if (document.disableScroll) {return;} // это КАК???? 
+
     const widthScroll = window.innerWidth - document.body.offsetWidth; //offset - без скролла, получаем разницу
     
+    document.disableScroll = true; 
+    // делаем, чтобы при нажатии пробела при открытой корзине ничего бы не дергалось
+
     document.body.dbScrollY = window.scrollY;
     //первые 3 строки чтобы кроссбраузерн ничего не прыгало оосбенно в айфоне
     document.body.style.cssText = ` 
@@ -40,13 +54,12 @@ const disableScroll = () => {
         padding-right: ${widthScroll}px; 
     `; 
     // так страница не будет прыгать 
-
     //  можно делать только строкой снизу, но есть некоторые баги в виде двига документа немного
-    //document.body.style.overflow = 'hidden'; 
-    
+    //document.body.style.overflow = 'hidden';  
 };
 const enableScroll = () => {
     //document.body.style.overflow = '';
+    document.disableScroll = false; 
     document.body.style.cssText = '';
     window.scroll({
            // top: '200' //px не надо
@@ -117,11 +130,11 @@ getData()
 //вызовет коллбэк, когда будет выполнена ф-уя гетдата
 
 // для нашего варианта: 
-const getGoods = (callback, value) => {
-    getData()
+const getGoods = (callback, prop, value) => {
+    getData('db.json')
         .then(data => {
             if (value) {
-                callback(data.filter(item => item.category === value));
+                callback(data.filter(item => item.[prop] === value));
             } else {
                  callback(data);
             }
@@ -131,6 +144,8 @@ const getGoods = (callback, value) => {
             console.error(err); 
         });
 };
+
+
  /*getGoods(() => {
     console.warn(data); // warn желтым цветом 
 }); */ 
@@ -151,14 +166,32 @@ cartOverLay.addEventListener('click', event => { // соаздается каж�
 
 // надо записать скрипт, чтобы он работал только на страницу goods а не везде
 
+
+
+
+
+
+
+
+
+// страница товаров
+
 try { // если этот блок ловит ошибку, то работает следующий 
     const goodsList = document.querySelector('.goods__list');
     if (!goodsList) { //меняет тру на фолс
         throw 'this is not a goods page'; //исключение
     }
 
-    // работаем с базой данных
+//
+    const goodsTitle = document.createElement('li');
+    const changeTitle = () => {
+        goodsTitle.textContent = document.querySelector(`[href*="#${hash}"]`).textContent;
+        //обратные кавычки. ищем по хэшу ссылку и берем оттуда контекстное значение чтобы сменить название
+    };
+    //changeTitle(); // только после обновления преключаются названия, если написать сюда, нао в hashchange 
 
+
+    // работаем с базой данных
     const createCard = data => {
 
         /*const id = data.id;
@@ -202,12 +235,17 @@ try { // если этот блок ловит ошибку, то работае
     const renderGoodsList = data => {
        goodsList.textContent = ''; //делаем пустую строку 
 // перебираем цикл 
-       for (let i = 0; i < data.lenght; i++) {
+        data.forEach((item) => {
+
+         const card = createCard(item);
+         goodsList.append(card);
+        });
+       //for (let i = 0; i < data.lenght; i++) {
            //console.log(data[i]);  выводится не просто список-массив теперь. а все объекты-элементы отдельно
-            const card = createCard(item);
-            goodsList.append(card);
+           // const card = createCard(item);
+           // goodsList.append(card);
        
-        }
+        //}
        /*
        еще один способ
 
@@ -225,13 +263,86 @@ try { // если этот блок ловит ошибку, то работае
 
     window.addEventListener('hashchange', () => {
         let hash = location.hash.substring(1); // 
-        getGoods(renderGoodsList, hash);// вызывает очищение и заполняет новыми без перезагрузки страницы
+        getGoods(renderGoodsList, 'category', hash);// вызывает очищение и заполняет новыми без перезагрузки страницы
+        changeTitle();
     });
-    
+    getGoods(renderGoodsList, 'category', hash);
 
 
 } catch(err) {
     console.warn(err);
 }
-// работает, на других страницах, если это не в товарами, высчевичается наддпись, что это не гудс пейдж
+// работает, на других страницах, если это не в товарами, высвечивается надпись, что это не гудс пейдж
 
+// чтобы при переключении на рубрики Женщинаи Дети и т.д менялся заголовок а 
+
+// формируем страницу товара
+
+try {
+    
+    if (!document.querySelector('.card-good')) { // если не нужная страница с товаром
+        throw 'this is no a card good page';
+    }
+    const cardGoodImage = document.querySelector('.card-good__image');
+    const cardGoodBrand = document.querySelector('.card-good__brand');
+    const cardGoodTitle = document.querySelector('.card-good__title');
+    const cardGoodPrice = document.querySelector('.card-good__price'); 
+    const cardGoodColor = document.querySelector('.card-good__color');
+    const cardGoodColorLIst = document.querySelector('.card-good__color-list'); 
+    const cardGoodSizes = document.querySelector('.card-good__sizes'); 
+    const cardGoodSizesLIst = document.querySelector('. card-good__sizes-list');
+    const cardGoodBuy = document.querySelector('. card-good__buy');
+    const cardGoodSelectWrapper = document.querySelectorAll('.arcd-good__select__wrapper');
+
+const generateList = data => data.reduce((html, item, i) => html + 
+    `<li class="card-good__select-item" data-id="${i}">${item}</li>`,  ''); // выводятся разные размеры и цвета и чтобы выбирали нами выбранный вариант
+
+
+    const renderCardGood = ([{brand, name, cost, color, sizes, photo}]) => {
+        cardGoodImage.src = `goods-image/${photo}`;
+        cardGoodImage.alt = `${brand} ${name}`;
+        cardGoodBrand.textContent = brand;
+        cardGoodTitle.textContent =  name;
+        cardGoodPrice.textContent = `${cost} p`;
+        
+        //не у всего есть размеры и цвета
+        if (color) {
+            cardGoodColor.textContent = color[0];
+            cardGoodColor.dataset.id = 0; // по умолчанию как и индекс
+            cardGoodColorList.innerHTML = generateList(color);
+        } else {
+            cardGoodColor.style.display = 'none';
+        }
+
+        if (sizes) {
+            cardGoodSizes.textContent = sizes[0];
+            cardGoodSizes.dataset.id = 0;
+            cardGoodSizesList.innerHTML = generateList(sizes);
+        } else {
+            cardGoodSizes.style.display = 'none';
+        }
+
+
+    };
+    cardGoodSelectWrapper.forEach(item => {
+        item.addEventListener('click', e => {
+            const target = e.target;
+
+            if (target.closest('.card-good__select')) {
+                target.classList.toggle('card-good__select__open'); //еtoggle добавляет класс, если его нет, убиарет, если есть. переключатель. 
+            }
+
+            if (target.closest('.card-good__select-item')) {
+                const cardGoodSelect = item.querySelector('.card-good__select');
+                cardGoodSelect.textContent = target.textContent;
+                cardGoodSelect.dataset.id = target.dataset.id;
+                
+                cardGoodSelect.classList.remove('card-good__select__open');
+            }
+        });
+    });
+    getGoods(renderCardGood, 'id', hash);
+
+} catch (err) {
+    console.warn(err);
+}
