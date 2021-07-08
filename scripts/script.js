@@ -1,6 +1,9 @@
 'use strict';
 const headerCityButton = document.querySelector('.header__city-button'); // ПОЧЕМУ НЕ getElement..
 
+let hash = location.hash.substring(1); // location - объект, есть и хэш.
+// сабстринг - удаляем решетку - хэш еред значением, которое будем потом использовать 
+
 if(localStorage.getItem('lomoda-location')) {
     headerCityButton.textContent = localStorage.getItem('lomoda-location');
 }
@@ -113,17 +116,22 @@ getData()
 // then это функ-я которая обрабатывает метод, который содержится у промисов, 
 //вызовет коллбэк, когда будет выполнена ф-уя гетдата
 
-// для нашего варианта:
-const getGoods = (callback) => {
+// для нашего варианта: 
+const getGoods = (callback, value) => {
     getData()
         .then(data => {
-            callback(data);
+            if (value) {
+                callback(data.filter(item => item.category === value));
+            } else {
+                 callback(data);
+            }
+           
         })
         .catch(err => {
             console.error(err); 
         });
 };
-/* getGoods(() => {
+ /*getGoods(() => {
     console.warn(data); // warn желтым цветом 
 }); */ 
 
@@ -140,3 +148,90 @@ cartOverLay.addEventListener('click', event => { // соаздается каж�
         cartModalClose();
     }
 });
+
+// надо записать скрипт, чтобы он работал только на страницу goods а не везде
+
+try { // если этот блок ловит ошибку, то работает следующий 
+    const goodsList = document.querySelector('.goods__list');
+    if (!goodsList) { //меняет тру на фолс
+        throw 'this is not a goods page'; //исключение
+    }
+
+    // работаем с базой данных
+
+    const createCard = data => {
+
+        /*const id = data.id;
+        const prewiev = data.prewiev;
+        const cost = data.cost;
+        const brand = data.brand;
+        const name =data.name;
+        const sizes = data.sizes; // вытащили из описания объекта*/
+        // это можно сделать деструктуризацией 
+     const {id, preview, cost, brand, name, sizes} = data;
+
+     // это тоже можно упростить
+     // const createCard = ({id, preview, cost, brand, name, sizes}) => {... и то что внутри дальше}
+
+        const li = document.createElement('li');
+
+        li.classList.add('goods__item');
+
+        li.innerHTML = `
+        <article class="good">
+        <a class="good__link-img" href="card-good.html#${id}">
+            <img class="good__img" src="goods-image/${preview}" alt="">
+        </a>
+        <div class="good__description">
+            <p class="good__price">${cost} &#8381;</p>
+            <h3 class="good__title">${brand} <span class="good__title__grey">/ Тайтсы</span></h3>
+            ${sizes ? 
+                `<p class="good__sizes">Размеры (RUS): <span class="good__sizes-list">${sizes.join(' ')}</span></p> `
+                : 
+                 ``   
+            }
+            
+            <a class="good__link" href="card-good.html#${id}">Подробнее</a>
+        </div>
+    </article>
+        `; // join объединяет желементы массика и ставим медлу ними  пробел
+        // не у всех товаров есть размеры и т.п, потому и делаем условие ? : 
+        return li; // ??? 
+    };
+// вот вся эта часть это надо пояснить ???
+    const renderGoodsList = data => {
+       goodsList.textContent = ''; //делаем пустую строку 
+// перебираем цикл 
+       for (let i = 0; i < data.lenght; i++) {
+           //console.log(data[i]);  выводится не просто список-массив теперь. а все объекты-элементы отдельно
+            const card = createCard(item);
+            goodsList.append(card);
+       
+        }
+       /*
+       еще один способ
+
+       for (const item of data) {
+           console.log(item);
+       }
+
+       и еще один
+
+       data.forEach((item) => {
+           console.log(item);
+       })
+       */ 
+    };
+
+    window.addEventListener('hashchange', () => {
+        let hash = location.hash.substring(1); // 
+        getGoods(renderGoodsList, hash);// вызывает очищение и заполняет новыми без перезагрузки страницы
+    });
+    
+
+
+} catch(err) {
+    console.warn(err);
+}
+// работает, на других страницах, если это не в товарами, высчевичается наддпись, что это не гудс пейдж
+
